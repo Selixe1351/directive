@@ -69,6 +69,7 @@ class CommandDispatcher(
 
         var command = root
         var remaining = args
+        val path = mutableListOf(label)
         while (true) {
             if (!allowed(actor, command)) {
                 actor.send(messages.noPermission)
@@ -76,12 +77,14 @@ class CommandDispatcher(
             }
             val next = remaining.firstOrNull()?.let { child(command, it) } ?: break
             command = next
+            path += next.name
             remaining = remaining.drop(1)
         }
 
+        val typed = path.joinToString(" ")
         val askedForHelp = remaining.firstOrNull()?.lowercase() in setOf("help", "?")
         if (command.subcommands.isNotEmpty() && (askedForHelp || !command.hasExecutor)) {
-            help(actor, command, label)
+            help(actor, command, typed)
             return true
         }
 
@@ -107,9 +110,9 @@ class CommandDispatcher(
 
         val context = CommandContext(actor, command, label, remaining)
         if (command.async) {
-            asyncExecutor.execute { execute(context, label, args) }
+            asyncExecutor.execute { execute(context, typed, args) }
         } else {
-            execute(context, label, args)
+            execute(context, typed, args)
         }
         return true
     }
@@ -152,7 +155,7 @@ class CommandDispatcher(
             .sorted()
     }
 
-    private fun execute(context: CommandContext, label: String, args: List<String>) {
+    private fun execute(context: CommandContext, typed: String, args: List<String>) {
         val command = context.command
         try {
             command.run(context)
@@ -164,11 +167,11 @@ class CommandDispatcher(
         } catch (e: CommandFailure) {
             context.actor.send(format(messages.failure, "message" to (e.message ?: "")))
             if (command.usage.isNotBlank()) {
-                context.actor.send(format(messages.usage, "usage" to usageLine(command, label)))
+                context.actor.send(format(messages.usage, "usage" to "$typed ${command.usage}"))
             }
         } catch (e: Exception) {
             context.actor.send(messages.error)
-            logger.log(Level.ERROR, "Command '/$label ${args.joinToString(" ")}' failed", e)
+            logger.log(Level.ERROR, "Command '/${context.label} ${args.joinToString(" ")}' failed", e)
         }
     }
 
@@ -191,14 +194,6 @@ class CommandDispatcher(
                     "description" to sub.description
                 )
             )
-        }
-    }
-
-    private fun usageLine(command: Command, label: String): String {
-        return if (command.name.equals(label, ignoreCase = true)) {
-            "$label ${command.usage}".trim()
-        } else {
-            "$label ${command.name} ${command.usage}".trim()
         }
     }
 

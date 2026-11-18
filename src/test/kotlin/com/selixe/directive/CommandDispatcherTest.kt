@@ -100,6 +100,32 @@ class CommandDispatcherTest {
     }
 
     @Test
+    fun `usage line uses the alias that was typed`() {
+        dispatcher.register(command("ipban", aliases = listOf("banip"), usage = "<address>") {
+            executes { it.string(0, "address") }
+        })
+
+        val actor = TestActor()
+        dispatcher.dispatch(actor, "banip", emptyList())
+
+        assertEquals("<gray>Usage: /banip <address>", actor.messages.last())
+    }
+
+    @Test
+    fun `usage line includes every subcommand level`() {
+        dispatcher.register(command("guild") {
+            sub("member") {
+                sub("add", usage = "<player>") { executes { it.string(0, "player") } }
+            }
+        })
+
+        val actor = TestActor()
+        dispatcher.dispatch(actor, "guild", listOf("member", "add"))
+
+        assertEquals("<gray>Usage: /guild member add <player>", actor.messages.last())
+    }
+
+    @Test
     fun `unexpected exception shows a generic error`() {
         dispatcher.register(command("broken") { executes { error("database down") } })
 

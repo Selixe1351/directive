@@ -10,7 +10,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.selixe.directive:directive:1.0.0'
+    implementation 'com.selixe.directive:directive:1.0.1'
 }
 ```
 
