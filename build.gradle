@@ -1,0 +1,52 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm' version '2.3.0'
+    id 'java-library'
+    id 'maven-publish'
+}
+
+group = 'com.selixe.directive'
+version = '1.0.0'
+
+repositories {
+    mavenCentral()
+    maven { url 'https://repo.papermc.io/repository/maven-public/' }
+}
+
+kotlin {
+    jvmToolchain(21)
+}
+
+java {
+    withSourcesJar()
+}
+
+dependencies {
+    compileOnly 'io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT'
+    compileOnly 'com.velocitypowered:velocity-api:3.4.0-SNAPSHOT'
+
+    testImplementation 'org.jetbrains.kotlin:kotlin-test'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+        }
+    }
+
+    repositories {
+        maven {
+            url = uri('https://repo.selixe.com/repository/api/')
+            credentials {
+                username = project.findProperty('nexusUsername') ?: System.getenv('NEXUS_USERNAME')
+                password = project.findProperty('nexusPassword') ?: System.getenv('NEXUS_PASSWORD')
+            }
+        }
+    }
+}
